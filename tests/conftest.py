@@ -144,7 +144,12 @@ def anonymous_client(db):
     """HTTP-клиент, подключённый к приложению на тестовой базе `db`, БЕЗ входа (токена нет)."""
 
     def override_get_db():
-        yield db
+        try:
+            yield db
+        finally:
+            # A real request's session is closed after the response, so work that was not committed is lost.
+            # Here the session is shared by the whole test, so discard it explicitly after every request.
+            db.rollback()
 
     # Подмена зависимости: везде, где эндпоинт просит Depends(get_db),
     # FastAPI теперь подставит нашу тестовую сессию.
